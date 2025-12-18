@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Preparación del cluster Minikube y ArgoCD
 1) Crear namespaces de ambientes
 
@@ -59,3 +60,7 @@ infra-gitops/
 
 
 
+=======
+#infra-k8s
+#Kubernetes
+>>>>>>> 6566602dcbc40948766ff3d45e64c0aba3b1f4a5
