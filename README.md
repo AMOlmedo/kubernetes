@@ -75,7 +75,6 @@ resources: {}
 ```
 
 ## 3) Overlays por ambiente
-
 environments/dev/values-service-a.yaml
 
 ```
@@ -119,23 +118,29 @@ spec:
     automated:
       prune: true
       selfHeal: true
+```
+
 Igual para service-b y para test cambiando paths, nombre y namespace.
 
 Aplicar apps:
 
-bash
+```
 kubectl apply -f infra-gitops/environments/dev/apps/ -n argocd
 kubectl apply -f infra-gitops/environments/test/apps/ -n argocd
-CI: build y actualización del repo de infraestructura
-1) Supuestos
+```
+
+# CI: build y actualización del repo de infraestructura
+## 1) Supuestos
+
 Registry: Docker Hub.
 
 Branch principal: main.
 
 Tag semántico: X.Y.Z-dev o X.Y.Z-test.
 
-2) Pipeline de CI (GitHub Actions en service-a/.github/workflows/release.yml)
-yaml
+## 2) Pipeline de CI (GitHub Actions en service-a/.github/workflows/release.yml)
+
+```
 name: release
 on:
   push:
@@ -190,34 +195,44 @@ jobs:
           git add .
           git commit -m "service-a: set image.tag=${VERSION} for ${ENV}"
           git push origin main
+```
+
 Repetir para service-b cambiando nombres. Notas:
 
 yq puede instalarse con pip install yq o paquete del runner.
 
 El CI no toca el cluster: solo “declara” el estado deseado en infra-gitops.
 
-Verificación end-to-end
-1) Disparar release dev
+# Verificación end-to-end
+## 1) Disparar release dev
 Crear tag en service-a:
 
-bash
+```
 git tag 1.0.0-dev
 git push origin 1.0.0-dev
+```
+
 El pipeline publica la imagen y actualiza infra-gitops/environments/dev/values-service-a.yaml.
 
 ArgoCD detecta el cambio, sincroniza y despliega en dev.
 
-2) Comprobar en el cluster
-bash
+## 2) Comprobar en el cluster
+
+```
 kubectl get pods -n dev
 kubectl describe deploy service-a -n dev
 kubectl get svc -n dev
-3) Repetir para test
-bash
+```
+
+## 3) Repetir para test
+
+```
 git tag 1.0.0-test
 git push origin 1.0.0-test
 kubectl get pods -n test
-Manejo de secretos y seguridad básica
+```
+
+# Manejo de secretos y seguridad básica
 Secretos en CI/CD:
 
 Guardar DOCKERHUB_TOKEN y GH_PAT en secretos del repo (no en el código).
@@ -236,18 +251,21 @@ Pull de imágenes privadas:
 
 Crear imagePullSecrets por namespace:
 
-bash
+```
 kubectl create secret docker-registry regcred \
   --docker-server=index.docker.io \
   --docker-username=your-dockerhub-username \
   --docker-password=YOUR_TOKEN \
   --docker-email=you@example.com \
   -n dev
+```
+
 Referenciar en los charts:
 
-yaml
+```
 imagePullSecrets:
   - name: regcred
+```
 
 
 
