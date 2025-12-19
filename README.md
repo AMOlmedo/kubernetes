@@ -1,7 +1,7 @@
 # Preparación del cluster Minikube y ArgoCD
 ## 1) Crear namespaces de ambientes
 Para tal fin se dispone de una VPS el cual previamente se ha instalado minikube para poder emular el cluster en k8s.
-Luego se procede a la creacion de nos namespace solicitados, `dev` y `test` como asi tambien el de `argocd`.
+Luego se procede a la creacion de nos namespaces solicitados, `dev` y `test`, como asi tambien el de `argocd` que luego lo necesitaremos.
 
 ```
 kubectl create namespace dev
@@ -15,9 +15,10 @@ kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl rollout status deploy/argocd-server -n argocd      
 ```
-Esta segunda linea de comando se utiliza para monitorear el progreso de un despliegue (deployment) específico en Kubernetes. 
+La segunda linea de comando se utilizará para monitorear el progreso de un despliegue (deployment) específico en Kubernetes. 
 
 ## 3) Exponer ArgoCD en Minikube
+
 
 ```
 kubectl -n argocd patch svc argocd-server -p '{"spec": {"type": "NodePort"}}'
@@ -25,14 +26,37 @@ kubectl -n argocd get svc argocd-server
 minikube service argocd-server -n argocd --url
 ```
 
-## 4) Obtener contraseña inicial
+En la primera linea de comando se cambia el servicio argocd-server que inicialmente viene por defecto como ClusterIp por NodePort. Esto es porque al no tener un cluster real, no tenemmos un servicios de  LoadBalancer, por lo cual para poder acceder a la interfaz web de ArgoCD desde afuera del cluster, se asigna un puerto que redirige el servicio dentro del cluster.
+Finalmete la última linea de comando abre un tunel y da un URL para acceder desde el navegador y expone la `IP` y el numero de puerto del servicio.
+
+## 4) Obtener password inicial por default
 
 ```
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
 ```
+Esta es la contraseña será requerida inicialmente para loguearnos en la consola ArgoCD con el usuario `admin`.
+
+En el escenario actual en donde necesito acceder al la consola de administracion desde  mi host al servicio ArgoCd expuesto en la VPS, en necesario en mi caso, crear un tunel. 
+
+En la VPS:
+```
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+Abre el servicio en el puerto 8080 de la VPS.
+
+Luego  desde mi WSL  creo el túnel:
+```
+ssh -L 8080:localhost:8080 adrian@IP-VPS
+```
+y finalmente desde mi navegador mi host (Win10):
+```
+http://localhost:8080
+```
+
+Y ahi finalmente accedo a la consola de ArgoCD.
 
 # Estructura de Helm y manifiestos GitOps
-## 1) Árbol de infra-gitops (ejemplo)
+## 1) Árbol de infra-gitops (demo)
 Esta es el diseño que tendrá este proyecto.
 
 ```
@@ -64,7 +88,8 @@ infra-gitops/
 └─ README.md
 ```
 
-## 2) Ejemplo values.yaml base (charts/service-a/values.yaml)
+## 2) Ejemplo `values.yaml` base (charts/service-a/values.yaml)
+
 
 ```
 image:
