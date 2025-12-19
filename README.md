@@ -1,5 +1,7 @@
 # Preparación del cluster Minikube y ArgoCD
 ## 1) Crear namespaces de ambientes
+Para tal fin se dispone de una VPS el cual previamente se ha instalado minikube para poder emular el cluster en k8s.
+Luego se procede a la creacion de nos namespace solicitados, `dev` y `test` como asi tambien el de `argocd`.
 
 ```
 kubectl create namespace dev
@@ -8,10 +10,13 @@ kubectl create namespace argocd
 ```
 ## 2) Instalar ArgoCD
 
+
 ```
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kubectl rollout status deploy/argocd-server -n argocd      #se utiliza para monitorear el progreso de un despliegue (deployment) específico en Kubernetes. 
+kubectl rollout status deploy/argocd-server -n argocd      
 ```
+Esta segunda linea de comando se utiliza para monitorear el progreso de un despliegue (deployment) específico en Kubernetes. 
+
 ## 3) Exponer ArgoCD en Minikube
 
 ```
@@ -19,6 +24,7 @@ kubectl -n argocd patch svc argocd-server -p '{"spec": {"type": "NodePort"}}'
 kubectl -n argocd get svc argocd-server
 minikube service argocd-server -n argocd --url
 ```
+
 ## 4) Obtener contraseña inicial
 
 ```
@@ -27,6 +33,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 # Estructura de Helm y manifiestos GitOps
 ## 1) Árbol de infra-gitops (ejemplo)
+Esta es el diseño que tendrá este proyecto.
 
 ```
 infra-gitops/
@@ -58,8 +65,8 @@ infra-gitops/
 ```
 
 ## 2) Ejemplo values.yaml base (charts/service-a/values.yaml)
+
 ```
-yaml
 image:
   repository: your-dockerhub-username/service-a
   tag: "latest"
@@ -91,7 +98,39 @@ image:
   tag: "1.0.0-test"
 ```
 
-Repetir para service-b.
+environments/dev/values-service-b.yaml
+
+```
+image:
+  repository: your-dockerhub-username/service-b
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources: {}
+```
+
+## 3) Overlays por ambiente
+environments/dev/values-service-a.yaml
+
+```
+namespace: dev
+replicaCount: 1
+image:
+  tag: "1.0.0-dev"
+environments/test/values-service-a.yaml
+
+yaml
+namespace: test
+replicaCount: 2
+image:
+  tag: "1.0.0-test"
+```
 
 ## 4) Aplicaciones de ArgoCD (dev/test)
 environments/dev/apps/app-service-a.yaml
